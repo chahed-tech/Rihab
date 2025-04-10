@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './Form.css';
 
 function EntrepriseForm({ onSubmit }) {
   const [formData, setFormData] = useState({
@@ -9,141 +10,208 @@ function EntrepriseForm({ onSubmit }) {
     email: '',
     telephone: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    imageFile: null,
+    whatsapp: '',
+    facebook: '',
+    instagram: ''
   });
 
-  const [errors, setErrors] = useState({});
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, files } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: files ? files[0] : value
     }));
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (formData.password.length < 6) {
-      newErrors.password = 'Le mot de passe doit contenir au moins 6 caractères';
-    }
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    // Effacer le message d'erreur quand l'utilisateur tape
+    if (error) setError('');
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      const { confirmPassword, ...dataToSubmit } = formData;
-      onSubmit(dataToSubmit);
+    
+    // Vérifier que les mots de passe correspondent
+    if (formData.password !== formData.confirmPassword) {
+      setError('Les mots de passe ne correspondent pas');
+      return;
     }
+
+    // Vérifier la force du mot de passe
+    if (formData.password.length < 8) {
+      setError('Le mot de passe doit contenir au moins 8 caractères');
+      return;
+    }
+
+    onSubmit(formData);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="form-container">
-      <div className="form-group">
-        <label htmlFor="nom">Nom de l'entreprise</label>
-        <input
-          type="text"
-          id="nom"
-          name="nom"
-          value={formData.nom}
-          onChange={handleChange}
-          required
-        />
-      </div>
+    <form className="form-container" onSubmit={handleSubmit}>
+      <h2>Inscription Entreprise</h2>
+      
+      <div className="form-grid">
+        <div className="form-group full-width">
+          <label htmlFor="imageFile">Logo de l'entreprise</label>
+          <input
+            type="file"
+            id="imageFile"
+            name="imageFile"
+            accept="image/*"
+            onChange={handleChange}
+            className="form-input"
+          />
+        </div>
 
-      <div className="form-group">
-        <label htmlFor="secteur">Secteur d'activité</label>
-        <input
-          type="text"
-          id="secteur"
-          name="secteur"
-          value={formData.secteur}
-          onChange={handleChange}
-          required
-        />
-      </div>
+        {error && <div className="error-message full-width">{error}</div>}
+        
+        <div className="form-group">
+          <label htmlFor="nom">Nom de l'entreprise</label>
+          <input
+            type="text"
+            id="nom"
+            name="nom"
+            value={formData.nom}
+            onChange={handleChange}
+            required
+            className="form-input"
+          />
+        </div>
 
-      <div className="form-group">
-        <label htmlFor="description">Description du projet</label>
-        <textarea
-          id="description"
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          required
-        />
-      </div>
+        <div className="form-group">
+          <label htmlFor="secteur">Secteur d'activité</label>
+          <input
+            type="text"
+            id="secteur"
+            name="secteur"
+            value={formData.secteur}
+            onChange={handleChange}
+            required
+            className="form-input"
+          />
+        </div>
 
-      <div className="form-group">
-        <label htmlFor="montantRecherche">Montant recherché (€)</label>
-        <input
-          type="number"
-          id="montantRecherche"
-          name="montantRecherche"
-          value={formData.montantRecherche}
-          onChange={handleChange}
-          required
-        />
-      </div>
+        <div className="form-group full-width">
+          <label htmlFor="description">Description</label>
+          <textarea
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            required
+            className="form-input"
+          />
+        </div>
 
-      <div className="form-group">
-        <label htmlFor="email">Email de contact</label>
-        <input
-          type="email"
-          id="email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          required
-        />
-      </div>
+        <div className="form-group">
+          <label htmlFor="montantRecherche">Montant recherché (€)</label>
+          <input
+            type="number"
+            id="montantRecherche"
+            name="montantRecherche"
+            value={formData.montantRecherche}
+            onChange={handleChange}
+            required
+            className="form-input"
+          />
+        </div>
 
-      <div className="form-group">
-        <label htmlFor="telephone">Téléphone</label>
-        <input
-          type="tel"
-          id="telephone"
-          name="telephone"
-          value={formData.telephone}
-          onChange={handleChange}
-          required
-        />
-      </div>
+        <div className="form-group">
+          <label htmlFor="email">Email</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            className="form-input"
+          />
+        </div>
 
-      <div className="form-group">
-        <label htmlFor="password">Mot de passe</label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          value={formData.password}
-          onChange={handleChange}
-          required
-        />
-        {errors.password && <span className="error-message">{errors.password}</span>}
-      </div>
+        <div className="form-group">
+          <label htmlFor="telephone">Téléphone</label>
+          <input
+            type="tel"
+            id="telephone"
+            name="telephone"
+            value={formData.telephone}
+            onChange={handleChange}
+            required
+            className="form-input"
+          />
+        </div>
 
-      <div className="form-group">
-        <label htmlFor="confirmPassword">Confirmer le mot de passe</label>
-        <input
-          type="password"
-          id="confirmPassword"
-          name="confirmPassword"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          required
-        />
-        {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
-      </div>
+        <div className="form-group">
+          <label htmlFor="whatsapp">WhatsApp</label>
+          <input
+            type="tel"
+            id="whatsapp"
+            name="whatsapp"
+            value={formData.whatsapp}
+            onChange={handleChange}
+            placeholder="Numéro WhatsApp (optionnel)"
+            className="form-input"
+          />
+        </div>
 
-      <button type="submit" className="submit-button">
-        Enregistrer
-      </button>
+        <div className="form-group">
+          <label htmlFor="facebook">Facebook</label>
+          <input
+            type="url"
+            id="facebook"
+            name="facebook"
+            value={formData.facebook}
+            onChange={handleChange}
+            placeholder="Lien Facebook (optionnel)"
+            className="form-input"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="instagram">Instagram</label>
+          <input
+            type="url"
+            id="instagram"
+            name="instagram"
+            value={formData.instagram}
+            onChange={handleChange}
+            placeholder="Lien Instagram (optionnel)"
+            className="form-input"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="password">Mot de passe</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            required
+            className="form-input"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="confirmPassword">Confirmer le mot de passe</label>
+          <input
+            type="password"
+            id="confirmPassword"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            required
+            className="form-input"
+          />
+        </div>
+
+        <button type="submit" className="submit-button">
+          S'inscrire
+        </button>
+      </div>
     </form>
   );
 }
