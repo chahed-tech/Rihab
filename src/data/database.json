@@ -1,4 +1,38 @@
 {
-  "entreprises": [],
-  "investisseurs": []
+  "entreprises": [
+    {
+      "id": 1,
+      "nom": "TechStart",
+      "secteur": "Technologie",
+      "description": "Startup spécialisée dans le développement d'applications mobiles innovantes",
+      "montantRecherche": 50000,
+      "email": "contact@techstart.com",
+      "telephone": "+33612345678",
+      "whatsapp": "+33612345678",
+      "facebook": "https://facebook.com/techstart",
+      "instagram": "https://instagram.com/techstart",
+      "image": "https://example.com/techstart-logo.jpg",
+      "dateInscription": "2024-03-15T10:00:00Z",
+      "statut": "actif"
+    }
+  ],
+  "investisseurs": [
+    {
+      "id": 1,
+      "nom": "Dupont",
+      "prenom": "Jean",
+      "typeInvestisseur": "Business Angel",
+      "montantMin": 10000,
+      "montantMax": 100000,
+      "secteursInteret": "Technologie, Santé, Éducation",
+      "email": "jean.dupont@investor.com",
+      "telephone": "+33687654321",
+      "whatsapp": "+33687654321",
+      "facebook": "https://facebook.com/jean.dupont",
+      "instagram": "https://instagram.com/jean.dupont",
+      "image": "https://example.com/jean-dupont.jpg",
+      "dateInscription": "2024-03-15T11:00:00Z",
+      "statut": "actif"
+    }
+  ]
 } 

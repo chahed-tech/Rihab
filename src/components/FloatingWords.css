@@ -1,0 +1,76 @@
+.floating-words {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.floating-word {
+  position: absolute;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 24px;
+  opacity: 0;
+  animation: floatAnimation 8s linear infinite;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+@keyframes floatAnimation {
+  0% {
+    transform: translateY(100vh) translateX(-50%) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.4;
+  }
+  80% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-20vh) translateX(50%) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Variations de couleurs adaptées au thème sombre */
+.floating-word:nth-child(3n) {
+  color: rgba(52, 152, 219, 0.6);
+}
+
+.floating-word:nth-child(3n+1) {
+  color: rgba(46, 204, 113, 0.6);
+}
+
+.floating-word:nth-child(3n+2) {
+  color: rgba(241, 196, 15, 0.6);
+}
+
+/* Variations de taille */
+.floating-word:nth-child(2n) {
+  font-size: 28px;
+}
+
+.floating-word:nth-child(4n) {
+  font-size: 20px;
+}
+
+/* Variations de vitesse et de trajectoire */
+.floating-word:nth-child(2n) {
+  animation-duration: 10s;
+  animation-timing-function: ease-in-out;
+}
+
+.floating-word:nth-child(3n) {
+  animation-duration: 12s;
+  animation-timing-function: ease-out;
+}
+
+.floating-word:nth-child(4n) {
+  animation-duration: 9s;
+  animation-timing-function: ease-in;
+} 

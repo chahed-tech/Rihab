@@ -4,8 +4,9 @@ import EntrepriseForm from './components/EntrepriseForm';
 import InvestisseurForm from './components/InvestisseurForm';
 import LoginForm from './components/LoginForm';
 import UserProfile from './components/UserProfile';
+import ChatBot from './components/ChatBot';
+import FloatingWords from './components/FloatingWords';
 import logo from './assets/images/Fundyy.png';
-import database from './data/database.json';
 
 // Constantes pour la gestion des images
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB par image
@@ -107,17 +108,28 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [storageUsed, setStorageUsed] = useState(0);
   const [error, setError] = useState('');
-  
-  // Charger les données depuis localStorage au démarrage
-  const [entreprises, setEntreprises] = useState(() => {
-    const savedEntreprises = localStorage.getItem('entreprises');
-    return savedEntreprises ? JSON.parse(savedEntreprises) : database.entreprises;
-  });
+  const [entreprises, setEntreprises] = useState([]);
+  const [investisseurs, setInvestisseurs] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchType, setSearchType] = useState('all'); // 'all', 'entreprises', 'investisseurs'
 
-  const [investisseurs, setInvestisseurs] = useState(() => {
-    const savedInvestisseurs = localStorage.getItem('investisseurs');
-    return savedInvestisseurs ? JSON.parse(savedInvestisseurs) : database.investisseurs;
-  });
+  // Charger les données depuis localStorage au démarrage
+  useEffect(() => {
+    const loadData = () => {
+      try {
+        const storedEntreprises = JSON.parse(localStorage.getItem('entreprises')) || [];
+        const storedInvestisseurs = JSON.parse(localStorage.getItem('investisseurs')) || [];
+        
+        setEntreprises(storedEntreprises);
+        setInvestisseurs(storedInvestisseurs);
+      } catch (error) {
+        console.error("Erreur lors du chargement des données:", error);
+        setError('Erreur lors du chargement des données.');
+      }
+    };
+
+    loadData();
+  }, []);
 
   // Calculer l'espace de stockage utilisé
   useEffect(() => {
@@ -141,18 +153,21 @@ function App() {
     calculateStorage();
   }, [entreprises, investisseurs]);
 
-  // Sauvegarder les données dans localStorage à chaque modification
-  useEffect(() => {
-    localStorage.setItem('entreprises', JSON.stringify(entreprises));
-  }, [entreprises]);
-
-  useEffect(() => {
-    localStorage.setItem('investisseurs', JSON.stringify(investisseurs));
-  }, [investisseurs]);
-
   // Fonction pour convertir une image en base64
   const convertImageToBase64 = (file) => {
     return new Promise((resolve, reject) => {
+      // Si c'est déjà une chaîne (probablement déjà en base64), retourner directement
+      if (typeof file === 'string') {
+        resolve(file);
+        return;
+      }
+
+      // Si ce n'est pas un objet File, rejeter la promesse
+      if (!(file instanceof File)) {
+        reject(new Error('Le fichier doit être un objet File valide'));
+        return;
+      }
+
       if (file.size > MAX_IMAGE_SIZE) {
         reject(new Error('L\'image est trop grande. Taille maximale: 2MB'));
         return;
@@ -187,27 +202,44 @@ function App() {
 
   const handleUpdateProfile = async (updatedData) => {
     try {
-      // Vérifier si une nouvelle image est ajoutée
-      if (updatedData.imageFile) {
-        const imageBase64 = await convertImageToBase64(updatedData.imageFile);
-        updatedData.image = imageBase64;
-        delete updatedData.imageFile;
+      if (!currentUser) {
+        throw new Error('Utilisateur non connecté');
       }
 
-      if (currentUser.type === 'entreprise') {
-        setEntreprises(prev => 
-          prev.map(entreprise => 
-            entreprise.id === currentUser.id ? { ...entreprise, ...updatedData } : entreprise
-          )
-        );
-      } else {
-        setInvestisseurs(prev => 
-          prev.map(investisseur => 
-            investisseur.id === currentUser.id ? { ...investisseur, ...updatedData } : investisseur
-          )
-        );
+      let imageToUpdate = updatedData.image;
+
+      if (updatedData.imageFile) {
+        imageToUpdate = await convertImageToBase64(updatedData.imageFile);
       }
-      setCurrentUser(updatedData);
+
+      const isEntreprise = Boolean(currentUser.secteur || updatedData.secteur);
+      const userType = isEntreprise ? 'entreprise' : 'investisseur';
+
+      const dataToUpdate = {
+        ...currentUser,
+        ...updatedData,
+        image: imageToUpdate,
+        type: userType
+      };
+
+      delete dataToUpdate.imageFile;
+
+      // Mettre à jour dans localStorage
+      if (isEntreprise) {
+        const updatedEntreprises = entreprises.map(entreprise => 
+          entreprise.id === currentUser.id ? dataToUpdate : entreprise
+        );
+        setEntreprises(updatedEntreprises);
+        localStorage.setItem('entreprises', JSON.stringify(updatedEntreprises));
+      } else {
+        const updatedInvestisseurs = investisseurs.map(investisseur => 
+          investisseur.id === currentUser.id ? dataToUpdate : investisseur
+        );
+        setInvestisseurs(updatedInvestisseurs);
+        localStorage.setItem('investisseurs', JSON.stringify(updatedInvestisseurs));
+      }
+
+      setCurrentUser(dataToUpdate);
       setView('profile');
       alert('Profil mis à jour avec succès !');
     } catch (error) {
@@ -218,102 +250,112 @@ function App() {
 
   const handleEntrepriseSubmit = async (formData) => {
     try {
-      // Vérifier les limites
-      if (entreprises.length >= MAX_ENTREPRISES) {
-        alert('Nombre maximum d\'entreprises atteint');
-        return;
-      }
-
-      if (storageUsed >= MAX_TOTAL_STORAGE) {
-        alert('Espace de stockage insuffisant');
-        return;
-      }
-
-      const emailExists = [...entreprises, ...investisseurs].some(
-        user => user.email === formData.email
-      );
-
-      if (emailExists) {
-        alert('Cet email est déjà utilisé. Veuillez utiliser un autre email.');
-        return;
-      }
-
-      // Convertir l'image si elle existe
-      let imageBase64 = null;
+      let imageUrl = null;
       if (formData.imageFile) {
-        imageBase64 = await convertImageToBase64(formData.imageFile);
+        imageUrl = await convertImageToBase64(formData.imageFile);
       }
 
       const newEntreprise = {
         ...formData,
-        id: Date.now(),
         type: 'entreprise',
+        image: imageUrl,
+        id: Date.now(),
         dateInscription: new Date().toISOString(),
-        statut: 'actif',
-        image: imageBase64
+        statut: 'actif'
       };
 
       delete newEntreprise.imageFile;
 
-      setEntreprises(prev => [...prev, newEntreprise]);
+      // Ajouter à localStorage
+      const updatedEntreprises = [...entreprises, newEntreprise];
+      setEntreprises(updatedEntreprises);
+      localStorage.setItem('entreprises', JSON.stringify(updatedEntreprises));
+
       setCurrentUser(newEntreprise);
       setIsLoggedIn(true);
       setView('profile');
-      alert('Inscription réussie !');
     } catch (error) {
       console.error('Erreur lors de l\'ajout de l\'entreprise:', error);
-      alert(error.message || 'Une erreur est survenue lors de l\'inscription. Veuillez réessayer.');
+      setError('Erreur lors de l\'inscription. Veuillez réessayer.');
     }
   };
 
   const handleInvestisseurSubmit = async (formData) => {
     try {
-      // Vérifier les limites
-      if (investisseurs.length >= MAX_INVESTISSEURS) {
-        alert('Nombre maximum d\'investisseurs atteint');
-        return;
-      }
-
-      if (storageUsed >= MAX_TOTAL_STORAGE) {
-        alert('Espace de stockage insuffisant');
-        return;
-      }
-
-      const emailExists = [...entreprises, ...investisseurs].some(
-        user => user.email === formData.email
-      );
-
-      if (emailExists) {
-        alert('Cet email est déjà utilisé. Veuillez utiliser un autre email.');
-        return;
-      }
-
-      // Convertir l'image si elle existe
-      let imageBase64 = null;
+      let imageUrl = null;
       if (formData.imageFile) {
-        imageBase64 = await convertImageToBase64(formData.imageFile);
+        imageUrl = await convertImageToBase64(formData.imageFile);
       }
 
       const newInvestisseur = {
         ...formData,
-        id: Date.now(),
         type: 'investisseur',
+        image: imageUrl,
+        id: Date.now(),
         dateInscription: new Date().toISOString(),
-        statut: 'actif',
-        image: imageBase64
+        statut: 'actif'
       };
 
       delete newInvestisseur.imageFile;
 
-      setInvestisseurs(prev => [...prev, newInvestisseur]);
+      // Ajouter à localStorage
+      const updatedInvestisseurs = [...investisseurs, newInvestisseur];
+      setInvestisseurs(updatedInvestisseurs);
+      localStorage.setItem('investisseurs', JSON.stringify(updatedInvestisseurs));
+
       setCurrentUser(newInvestisseur);
       setIsLoggedIn(true);
       setView('profile');
-      alert('Inscription réussie !');
     } catch (error) {
       console.error('Erreur lors de l\'ajout de l\'investisseur:', error);
-      alert(error.message || 'Une erreur est survenue lors de l\'inscription. Veuillez réessayer.');
+      setError('Erreur lors de l\'inscription. Veuillez réessayer.');
     }
+  };
+
+  // Composant de recherche
+  const SearchBar = () => {
+    // Ne pas afficher la barre de recherche si on n'est pas dans les sections entreprises ou investisseurs
+    if (view !== 'entreprises' && view !== 'investisseurs') {
+      return null;
+    }
+
+    return (
+      <div className="search-container">
+        <div className="search-controls">
+          <input
+            type="text"
+            placeholder={view === 'entreprises' ? "Rechercher par secteur d'activité..." : "Rechercher par secteur d'intérêt..."}
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+            }}
+            className="search-input"
+          />
+        </div>
+        <div className="search-info">
+          {view === 'entreprises' && (
+            <p>Recherchez les entreprises par secteur d'activité. Exemple: Technologie, Santé, Éducation...</p>
+          )}
+          {view === 'investisseurs' && (
+            <p>Recherchez les investisseurs par secteur d'intérêt. Exemple: Technologie, Santé, Éducation...</p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Fonction pour filtrer les résultats de recherche
+  const filterResults = (items, type) => {
+    if (!searchTerm) return items;
+    
+    const lowerSearchTerm = searchTerm.toLowerCase().trim();
+    return items.filter(item => {
+      if (type === 'entreprise') {
+        return item.secteur && item.secteur.toLowerCase().includes(lowerSearchTerm);
+      } else {
+        return item.secteursInteret && item.secteursInteret.toLowerCase().includes(lowerSearchTerm);
+      }
+    });
   };
 
   const renderContent = () => {
@@ -321,7 +363,12 @@ function App() {
       case 'home':
         return (
           <div className="home-content">
+            <FloatingWords />
             <img src={logo} alt="Fundyy Logo Spinning" className="home-logo" />
+            <div className="home-welcome">
+              <h1>Bienvenue sur Fundy</h1>
+              <p>La plateforme qui connecte les entreprises innovantes aux investisseurs</p>
+            </div>
           </div>
         );
       case 'login':
@@ -337,12 +384,13 @@ function App() {
         return (
           <section className="list-section">
             <h2>Liste des Entreprises</h2>
+            <SearchBar />
             <div className="cards-container">
-              {entreprises.map(entreprise => (
+              {filterResults(entreprises, 'entreprise').map(entreprise => (
                 <EntrepriseCard key={entreprise.id} entreprise={entreprise} />
               ))}
-              {entreprises.length === 0 && (
-                <p className="no-data">Aucune entreprise n'est actuellement enregistrée.</p>
+              {filterResults(entreprises, 'entreprise').length === 0 && (
+                <p className="no-data">Aucune entreprise ne correspond à votre recherche.</p>
               )}
             </div>
           </section>
@@ -351,12 +399,13 @@ function App() {
         return (
           <section className="list-section">
             <h2>Liste des Investisseurs</h2>
+            <SearchBar />
             <div className="cards-container">
-              {investisseurs.map(investisseur => (
+              {filterResults(investisseurs, 'investisseur').map(investisseur => (
                 <InvestisseurCard key={investisseur.id} investisseur={investisseur} />
               ))}
-              {investisseurs.length === 0 && (
-                <p className="no-data">Aucun investisseur n'est actuellement enregistré.</p>
+              {filterResults(investisseurs, 'investisseur').length === 0 && (
+                <p className="no-data">Aucun investisseur ne correspond à votre recherche.</p>
               )}
             </div>
           </section>
@@ -442,9 +491,11 @@ function App() {
         </div>
       </nav>
 
-      <main className="content">
+      <main>
         {renderContent()}
       </main>
+
+      <ChatBot />
     </div>
   );
 }
